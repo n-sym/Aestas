@@ -224,9 +224,9 @@ module rec AestasBot =
         async {
         let es = Parser.parseBotOut media s
         let newContent() = if isPrivate then MessageBuilder.Friend(id) else MessageBuilder.Group(id)
-        let content = newContent()
+        let mutable content = newContent()
         let send (content: MessageBuilder) =
-            if content.Count <> 0 then
+            if content.Build().Count <> 0 then
                 let result = content.Build() |> context.SendMessage |> await
                 printfn "sends:%d" result.Result
         for e in es do
@@ -235,11 +235,11 @@ module rec AestasBot =
             | :? ForwardEntity
             | :? RecordEntity ->
                 send content
-                content.Clear()
+                content <- newContent()
                 e |> newContent().Add |> send
             | :? MarketFaceEntity as m ->
                 send content
-                content.Clear()
+                content <- newContent()
                 newContent().Add(e).Add(new TextEntity(m.Summary)) |> send
             | _ -> content.Add e |> ignore
         send content

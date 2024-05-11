@@ -31,7 +31,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="ref\Lagrange.Core\Lagrange.Core.csproj" />
+    <ProjectReference Include="ref\Lagrange.Core\Lagrange.Core\Lagrange.Core.csproj" />
   </ItemGroup>
 
   <ItemGroup>

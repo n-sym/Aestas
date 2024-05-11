@@ -1,3 +1,5 @@
 [submodule "ref/Lagrange.Core"]
 	path = ref/Lagrange.Core
 	url = https://github.com/LagrangeDev/Lagrange.Core
+	sparsecheckout = true
+	shallow = true

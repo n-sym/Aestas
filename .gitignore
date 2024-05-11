@@ -3,7 +3,6 @@
 bin/
 obj/
 Properties/
-ref/
 media/*
 profiles/*
 deviceinfo.json
