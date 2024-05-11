@@ -18,7 +18,12 @@
     <Compile Include="src\api\cohere.fs" />
     <Compile Include="src\api\gemini.fs" />
     <Compile Include="src\api\ernie.fs" />
-    <Compile Include="src\parser.fs" />
+    <Compile Include="src\types.fs" />
+    <Compile Include="src\commands\lexer.fs" />
+    <Compile Include="src\commands\parser.fs" />
+    <Compile Include="src\commands\command.fs" />
+    <Compile Include="src\commands\builtin.fs" />
+    <Compile Include="src\botParser.fs" />
     <Compile Include="src\bot.fs" />
     <Compile Include="src\cli.fs" />
   </ItemGroup>

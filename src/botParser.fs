@@ -7,23 +7,10 @@ open System.Linq
 open System.Net.Http
 open Prim
 open Aestas.ChatApi
+open AestasTypes
 open Lagrange.Core.Message
 open Lagrange.Core.Message.Entity
 module rec Parser =
-    type MultiMediaParser = {
-        image2text: (byte[] -> string) option
-        text2speech: (string -> string -> byte[]) option
-        text2image: (string -> byte[]) option
-        speech2text: (byte[] -> string) option
-        stickers: Dictionary<string, Sticker>
-    }
-    type _MarketSticker = {
-        faceid: string
-        tabid: int
-        key: string
-        summary: string
-    }
-    type Sticker = ImageSticker of byte[] | MarketSticker of _MarketSticker
     let parseBotOut (media: MultiMediaParser) (botOut: string) =
         let cache = StringBuilder()
         let result = arrList<IMessageEntity>()
