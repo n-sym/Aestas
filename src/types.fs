@@ -7,10 +7,10 @@ open Aestas.ChatApi
 open Prim
 module rec AestasTypes =
     type private _print = string -> unit
-    type private _chatHook = ChatClient -> unit
+    type private _chatHook = IChatClient -> unit
     type Aestas = {
-        privateChats: Dictionary<uint32, ChatClient>
-        groupChats: Dictionary<uint32, ChatClient*arrList<struct(string*string)>>
+        privateChats: Dictionary<uint32, IChatClient>
+        groupChats: Dictionary<uint32, IChatClient*arrList<struct(string*string)>>
         prePrivateChat: _chatHook
         preGroupChat: _chatHook
         postPrivateChat: _chatHook
@@ -18,6 +18,7 @@ module rec AestasTypes =
         media: MultiMediaParser
         privateCommands: Dictionary<string, ICommand>
         groupCommands: Dictionary<string, ICommand>
+        awakeMe: Dictionary<string, float32> 
     }
     type MultiMediaParser = {
         image2text: (byte[] -> string) option
@@ -39,11 +40,12 @@ module rec AestasTypes =
             abstract member Help: string
         end
     type CommandEnvironment = {
+        aestas: Aestas
         context: BotContext
         chain: MessageChain
         commands: Dictionary<string, ICommand>
         log: string -> unit
-        model: ChatClient ref
+        model: IChatClient ref
     }
     type Ast =
     | Call of Ast list
@@ -54,10 +56,10 @@ module rec AestasTypes =
     | Identifier of string
     | Unit
     
-    type ChatClient with
-        static member Create<'t when 't :> ChatClient> (p: obj[]) =
+    type IChatClient with
+        static member Create<'t when 't :> IChatClient> (p: obj[]) =
             try
-            (typeof<'t>).GetConstructor(p |> Array.map(fun a -> a.GetType())).Invoke(p) :?> ChatClient
+            (typeof<'t>).GetConstructor(p |> Array.map(fun a -> a.GetType())).Invoke(p) :?> IChatClient
             with | ex -> 
                 printfn "Error: %A\nwhen create %A" ex (typeof<'t>)
-                UnitClient() :> ChatClient
+                UnitClient() :> IChatClient

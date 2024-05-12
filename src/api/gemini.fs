@@ -106,7 +106,7 @@ type GeminiClient (profile: string) =
                 checkDialogLength()
             | Error result -> printfn "Gemini request failed: %A" result
             }
-    interface ChatClient with
+    interface IChatClient with
         member _.Messages = 
             messages.contents |> Seq.map (fun m -> {role = m.role; content = m.parts[0].text})
             |> ResizeArray
@@ -174,7 +174,7 @@ type Gemini10Client(profile: string, tunedName: string) =
             checkDialogLength()
         | Error result -> printfn "Gemini10 request failed: %A" result
         }
-    interface ChatClient with
+    interface IChatClient with
         member _.Messages = 
             let r = 
                 messages.contents 

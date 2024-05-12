@@ -1,6 +1,6 @@
 namespace Aestas.ChatApi
 type UnitClient() =
-    interface ChatClient with
+    interface IChatClient with
         member val Messages = ResizeArray([{role = ""; content = ""}])
         member val DataBase = ResizeArray()
         member _.Turn input _ = 

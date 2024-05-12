@@ -18,7 +18,7 @@ module Cli =
     Voice and Image are not supported in cli
 ----------------------------------------------
 """
-            let mutable client = ErnieClient("profiles/chat_info_private_ernie.json", Ernie_35P) :> ChatClient
+            let mutable client = ErnieClient("profiles/chat_info_private_ernie.json", Ernie_35P) :> IChatClient
             printfn "%s" introHelp
             let rec mainLoop() =
                 let rec printDialogs (messages: ResizeArray<Message>) i =
@@ -71,11 +71,11 @@ module Cli =
                             mainLoop()
                         else
                             match command[1] with
-                            | "15" -> client <- GeminiClient "profiles/chat_info_private_gemini.json" :> ChatClient
-                            | "10" -> client <- Gemini10Client ("profiles/chat_info_private_gemini.json", "") :> ChatClient
+                            | "15" -> client <- GeminiClient "profiles/chat_info_private_gemini.json" :> IChatClient
+                            | "10" -> client <- Gemini10Client ("profiles/chat_info_private_gemini.json", "") :> IChatClient
                             | _ -> 
                                 command[1] <- "default:10"
-                                client <- Gemini10Client ("profiles/chat_info_private_gemini.json", "") :> ChatClient
+                                client <- Gemini10Client ("profiles/chat_info_private_gemini.json", "") :> IChatClient
                             printfn $"Model changed to gemini {command[1]}"
                             mainLoop()
                     | "cohere" ->

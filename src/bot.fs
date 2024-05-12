@@ -57,7 +57,7 @@ module rec AestasBot =
             c.Protocol <- Protocols.Linux
             c;
             , deviceInfo, keyStore)
-        let preChat (model: ChatClient) =
+        let preChat (model: IChatClient) =
             if model.DataBase.Count = 0 then model.DataBase.Add(Dictionary())
             if model.DataBase[0].ContainsKey("time") |> not then model.DataBase[0].Add("time", "")
             model.DataBase[0]["time"] <- DateTime.Now.ToString()
@@ -87,6 +87,7 @@ module rec AestasBot =
                 a.Domain &&& AestasCommandDomain.Private <> AestasCommandDomain.None)
             groupCommands = getCommands(fun a -> 
                 a.Domain &&& AestasCommandDomain.Group <> AestasCommandDomain.None)
+            awakeMe = loadAwakeMe()
         }
         (fun context event -> 
             printfn "%A" event
@@ -131,11 +132,11 @@ module rec AestasBot =
             |> context.SendMessage |> await |> ignore
         if event.Chain.FriendUin = context.BotUin then () else
         if tryProcessCommand aestas context event.Chain print true event.Chain.FriendUin then () else
-        let dialog = event.Chain |> Parser.parseElements true (getMsgPrivte context event.Chain aestas true) aestas.media
+        let dialog = event.Chain |> MessageParser.parseElements true (getMsgPrivte context event.Chain aestas true) aestas.media
         try
         if aestas.privateChats.ContainsKey(event.Chain.FriendUin) |> not then 
             aestas.privateChats.Add(event.Chain.FriendUin, 
-            ChatClient.Create<ErnieClient> [|"profiles/chat_info_group_ernie.json"; Ernie_35P|])
+            IChatClient.Create<ErnieClient> [|"profiles/chat_info_group_ernie.json"; Ernie_35P|])
         let chat = aestas.privateChats[event.Chain.FriendUin]
         aestas.prePrivateChat chat
         chat.Turn $"{{{event.Chain.FriendInfo.Nickname}}} {dialog}" (buildElement context aestas.media event.Chain.FriendUin true)
@@ -157,18 +158,23 @@ module rec AestasBot =
             ) |> event.Chain.Any || 
             (let msg = event.Chain.FirstOrDefault(fun t -> isEntity<TextEntity> t) in
             if isNull msg then false else
-            let text = (msg :?> TextEntity).Text in text.Contains("aaabbbccc"))
+            let text = (msg :?> TextEntity).Text in 
+                aestas.awakeMe 
+                |> Seq.tryFind (fun p -> text.Contains(p.Key))
+                |> function 
+                    | Some p -> p.Value > Random.Shared.NextSingle()
+                    | None -> false)
         let name = 
             if event.Chain.GroupMemberInfo.MemberCard |> String.IsNullOrEmpty then
                 event.Chain.GroupMemberInfo.MemberName
             else event.Chain.GroupMemberInfo.MemberCard
         if atMe then 
             if tryProcessCommand aestas context event.Chain print false event.Chain.GroupUin.Value then () else
-            let dialog = event.Chain |> Parser.parseElements true (getMsgGroup context event.Chain aestas true) aestas.media
+            let dialog = event.Chain |> MessageParser.parseElements true (getMsgGroup context event.Chain aestas true) aestas.media
             try
             if aestas.groupChats.ContainsKey(event.Chain.GroupUin.Value) |> not then 
                 aestas.groupChats.Add(event.Chain.GroupUin.Value, 
-                (ChatClient.Create<ErnieClient> [|"profiles/chat_info_group_ernie.json"; Ernie_35P|], arrList()))
+                (IChatClient.Create<ErnieClient> [|"profiles/chat_info_group_ernie.json"; Ernie_35P|], arrList()))
             let chat, cache = aestas.groupChats[event.Chain.GroupUin.Value]
             let dialog = 
                 if cache.Count = 0 then $"{{{name}}} {dialog}" else
@@ -188,8 +194,8 @@ module rec AestasBot =
             try
             if aestas.groupChats.ContainsKey(event.Chain.GroupUin.Value) |> not then 
                 aestas.groupChats.Add(event.Chain.GroupUin.Value, 
-                (ChatClient.Create<ErnieClient> [|"profiles/chat_info_group_ernie.json"; Ernie_35P|], arrList()))
-            let dialog = event.Chain |> Parser.parseElements false (getMsgGroup context event.Chain aestas false) aestas.media
+                (IChatClient.Create<ErnieClient> [|"profiles/chat_info_group_ernie.json"; Ernie_35P|], arrList()))
+            let dialog = event.Chain |> MessageParser.parseElements false (getMsgGroup context event.Chain aestas false) aestas.media
             let _, cache = aestas.groupChats[event.Chain.GroupUin.Value]
             cache.Add (name, dialog)
             with e -> printfn "Error: %A" e
@@ -199,7 +205,7 @@ module rec AestasBot =
             let msgs = context.GetRoamMessage(chain, 30u).Result
             let f = msgs.FirstOrDefault(fun a -> a.Sequence = u)
             if isNull f then "Message not found, maybe too far."
-            else f |> Parser.parseElements flag (getMsgPrivte context chain aestas flag) aestas.media
+            else $"{{{chain.FriendInfo.Nickname}}} {f |> MessageParser.parseElements flag (getMsgPrivte context chain aestas flag) aestas.media}"
     let rec getMsgGroup context chain aestas flag u =
             let msgs = context.GetGroupMessage(chain.GroupUin.Value, chain.Sequence-30u, chain.Sequence).Result
             let f = msgs.FirstOrDefault(fun a -> a.Sequence = u)
@@ -209,10 +215,10 @@ module rec AestasBot =
                     if f.GroupMemberInfo.MemberCard |> String.IsNullOrEmpty then
                         f.GroupMemberInfo.MemberName
                     else f.GroupMemberInfo.MemberCard
-                $"{{{name}}} {f |> Parser.parseElements flag (getMsgGroup context chain aestas flag) aestas.media}"
+                $"{{{name}}} {f |> MessageParser.parseElements flag (getMsgGroup context chain aestas flag) aestas.media}"
     let buildElement context media id isPrivate (s: string) =
         async {
-        let es = Parser.parseBotOut media s
+        let es = MessageParser.parseBotOut media s
         let newContent() = if isPrivate then MessageBuilder.Friend(id) else MessageBuilder.Group(id)
         let mutable content = newContent()
         let send (content: MessageBuilder) =
@@ -272,8 +278,8 @@ module rec AestasBot =
                         | _ -> 
                             command[1] <- "default:chara"
                             Ernie_Chara
-                    if isPrivate then aestas.privateChats[id] <- ChatClient.Create<ErnieClient> [|"profiles/chat_info_private_ernie.json"; model|]
-                    else aestas.groupChats[id] <- ChatClient.Create<ErnieClient> [|"profiles/chat_info_group_ernie.json"; model|], arrList()
+                    if isPrivate then aestas.privateChats[id] <- IChatClient.Create<ErnieClient> [|"profiles/chat_info_private_ernie.json"; model|]
+                    else aestas.groupChats[id] <- IChatClient.Create<ErnieClient> [|"profiles/chat_info_group_ernie.json"; model|], arrList()
                     print $"Model changed to ernie{command[1]}"
             | "#gemini" -> 
                 if command.Length < 2 then print "Usage: gemini [model=15|10]"
@@ -281,17 +287,17 @@ module rec AestasBot =
                     let profile = if isPrivate then "profiles/chat_info_private_gemini.json" else "profiles/chat_info_group_gemini.json"
                     let model = 
                         match command[1] with
-                        | "15" -> ChatClient.Create<GeminiClient> [|profile|]
-                        | "10" -> ChatClient.Create<Gemini10Client> [|profile; ""|]
-                        | "vespera" -> ChatClient.Create<Gemini10Client> [|profile; "vespera-k7ejxi4vj84j"|]
+                        | "15" -> IChatClient.Create<GeminiClient> [|profile|]
+                        | "10" -> IChatClient.Create<Gemini10Client> [|profile; ""|]
+                        | "vespera" -> IChatClient.Create<Gemini10Client> [|profile; "vespera-k7ejxi4vj84j"|]
                         | _ -> 
                             command[1] <- "default:10"
-                            ChatClient.Create<Gemini10Client> [|profile; ""|]
+                            IChatClient.Create<Gemini10Client> [|profile; ""|]
                     if isPrivate then aestas.privateChats[id] <- model
                     else aestas.groupChats[id] <- model, arrList()
                     print $"Model changed to gemini {command[1]}"
             | "#cohere" -> 
-                let model = ChatClient.Create<CohereClient> [|if isPrivate then "profiles/chat_info_private_cohere.json" else "profiles/chat_info_group_cohere.json"|]
+                let model = IChatClient.Create<CohereClient> [|if isPrivate then "profiles/chat_info_private_cohere.json" else "profiles/chat_info_group_cohere.json"|]
                 if isPrivate then aestas.privateChats[id] <- model
                 else aestas.groupChats[id] <- model, arrList()
                 print $"Model changed to cohere"
@@ -312,14 +318,14 @@ module rec AestasBot =
             let model =
                 if aestas.privateChats.ContainsKey id then ref aestas.privateChats[id]
                 else let x = UnitClient() in aestas.privateChats.Add(id, x); ref x
-            {context = context; chain = msgs; commands = aestas.privateCommands; log = print; model = model}
+            {aestas = aestas; context = context; chain = msgs; commands = aestas.privateCommands; log = print; model = model}
             |> excecute <| source
             aestas.privateChats[id] <- model.Value
         | _ ->
             let model =
                 if aestas.groupChats.ContainsKey id then aestas.groupChats[id] |> fst |> ref
                 else let x = UnitClient() in aestas.groupChats.Add(id, (x, arrList())); ref x
-            {context = context; chain = msgs; commands = aestas.groupCommands; log = print; model = model}
+            {aestas = aestas; context = context; chain = msgs; commands = aestas.groupCommands; log = print; model = model}
             |> excecute <| source
             aestas.groupChats[id] <- model.Value, snd aestas.groupChats[id]
         true
@@ -331,12 +337,20 @@ module rec AestasBot =
         from_market: Dictionary<string, _MarketSticker>
     }
     let loadStickers() =
+        let result = Dictionary<string, Sticker>()
+        try
         let json = 
             File.ReadAllText("profiles/stickers.json") |> JsonConvert.DeserializeObject<_Stickers>
-        let result = Dictionary<string, Sticker>()
         for p in json.from_file do
             let data = File.ReadAllBytes p.Value
             result.Add(p.Key, data |> ImageSticker)
         for s in json.from_market do
             result.Add(s.Key, s.Value |> MarketSticker)
+        with _ -> ()
         result
+
+    let loadAwakeMe() =
+        try
+        File.ReadAllText("profiles/awake_me.json") |> JsonConvert.DeserializeObject<Dictionary<string, float32>>
+        with
+        | _ -> Dictionary()

@@ -76,7 +76,7 @@ type ErnieClient(profile: string, model: EModel) =
         else printfn "Ernie request failed: %A" result
         }
     
-    interface ChatClient with
+    interface IChatClient with
         member _.Messages = messages.messages
         member _.DataBase = database
         member _.Turn input send = receive input send |> Async.RunSynchronously

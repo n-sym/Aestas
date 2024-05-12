@@ -8,3 +8,4 @@ profiles/*
 deviceinfo.json
 keystore.json
 config.json
+.fake

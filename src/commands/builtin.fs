@@ -48,14 +48,14 @@ module AestasBuiltinCommands =
                 | Identifier name::[] ->
                     let model = 
                         match name with
-                        | "gemini" -> ChatClient.Create<GeminiClient>[|profile "gemini"|]
-                        | "gemini10" -> ChatClient.Create<Gemini10Client>[|profile "gemini"; ""|]
-                        | "ernie35" -> ChatClient.Create<ErnieClient>[|profile "ernie"; Ernie_35|]
-                        | "ernie35p" -> ChatClient.Create<ErnieClient>[|profile "ernie"; Ernie_35P|]
-                        | "ernie40" -> ChatClient.Create<ErnieClient>[|profile "ernie"; Ernie_40|]
-                        | "ernie40p" -> ChatClient.Create<ErnieClient>[|profile "ernie"; Ernie_40P|]
-                        | "erniechara" -> ChatClient.Create<ErnieClient>[|profile "ernie"; Ernie_Chara|]
-                        | "cohere" -> ChatClient.Create<CohereClient>[|profile "cohere"|]
+                        | "gemini" -> IChatClient.Create<GeminiClient>[|profile "gemini"|]
+                        | "gemini10" -> IChatClient.Create<Gemini10Client>[|profile "gemini"; ""|]
+                        | "ernie35" -> IChatClient.Create<ErnieClient>[|profile "ernie"; Ernie_35|]
+                        | "ernie35p" -> IChatClient.Create<ErnieClient>[|profile "ernie"; Ernie_35P|]
+                        | "ernie40" -> IChatClient.Create<ErnieClient>[|profile "ernie"; Ernie_40|]
+                        | "ernie40p" -> IChatClient.Create<ErnieClient>[|profile "ernie"; Ernie_40P|]
+                        | "erniechara" -> IChatClient.Create<ErnieClient>[|profile "ernie"; Ernie_Chara|]
+                        | "cohere" -> IChatClient.Create<CohereClient>[|profile "cohere"|]
                         | _ -> failwith $"Could not find model {name}"
                     env.model.Value <- model
                     env.log $"Model switched to \"{name}\""; Unit
@@ -78,4 +78,24 @@ module AestasBuiltinCommands =
                     sb.Append('\n').Append(m.role).Append(": ").Append(m.content) |> ignore
                 sb.ToString() |> env.log; Unit
             member this.Help = "Dumps the context"
+    [<AestasCommand("awakeme", AestasCommandDomain.Group)>]
+    type AwakeMe() =
+        interface ICommand with
+            member this.Execute (env, args) =
+                match args with
+                | [] -> env.log "Invalid arguments"
+                | String s::Number n::[] -> 
+                    env.aestas.awakeMe.Add(s, n)
+                    env.log $"Added {s} to awake dictionary with {n}"
+                | String s::[] ->
+                    env.aestas.awakeMe.Add(s, 1.0f)
+                    env.log $"Added {s} to awake dictionary with 1.0"
+                | Identifier "remove"::String s::[] ->
+                    if env.aestas.awakeMe.ContainsKey s then
+                        env.aestas.awakeMe.Remove(s) |> ignore
+                        env.log $"Removed {s} from awake dictionary"
+                    else env.log $"Could not find {s} in awake dictionary"
+                | _ -> env.log "Invalid arguments"
+                Unit
+            member this.Help = "Adds or removes a word from the awake list"
     

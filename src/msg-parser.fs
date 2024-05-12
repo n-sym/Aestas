@@ -10,7 +10,7 @@ open Aestas.ChatApi
 open AestasTypes
 open Lagrange.Core.Message
 open Lagrange.Core.Message.Entity
-module rec Parser =
+module rec MessageParser =
     let parseBotOut (media: MultiMediaParser) (botOut: string) =
         let cache = StringBuilder()
         let result = arrList<IMessageEntity>()

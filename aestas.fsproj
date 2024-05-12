@@ -23,7 +23,7 @@
     <Compile Include="src\commands\parser.fs" />
     <Compile Include="src\commands\command.fs" />
     <Compile Include="src\commands\builtin.fs" />
-    <Compile Include="src\botParser.fs" />
+    <Compile Include="src\msg-parser.fs" />
     <Compile Include="src\bot.fs" />
     <Compile Include="src\cli.fs" />
   </ItemGroup>

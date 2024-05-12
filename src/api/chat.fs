@@ -10,7 +10,7 @@ open Newtonsoft.Json.Linq
 
 type Message = {role: string; content: string}
 type Messages = {messages: ResizeArray<Message>; system: string}
-type ChatClient =
+type IChatClient =
     interface
         abstract member Messages: ResizeArray<Message>
         abstract member DataBase: ResizeArray<Dictionary<string, string>>

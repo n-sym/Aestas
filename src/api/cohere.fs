@@ -93,7 +93,7 @@ type CohereClient(profile: string) =
             messages.chat_history.Add({role = "CHATBOT"; message = response.text})
             checkDialogLength()
         }
-    interface ChatClient with
+    interface IChatClient with
         member _.Messages = 
             let r = 
                 messages.chat_history |> Seq.map (fun m -> {role = m.role; content = m.message})
