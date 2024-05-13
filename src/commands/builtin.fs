@@ -95,7 +95,36 @@ module AestasBuiltinCommands =
                         env.aestas.awakeMe.Remove(s) |> ignore
                         env.log $"Removed {s} from awake dictionary"
                     else env.log $"Could not find {s} in awake dictionary"
+                | Identifier "list"::[] ->
+                    let sb = StringBuilder()
+                    sb.Append("Awake words:") |> ignore
+                    for p in env.aestas.awakeMe do
+                        sb.Append('\n').Append(p.Key).Append(" with chance ").Append(p.Value) |> ignore
+                    sb.ToString() |> env.log;
                 | _ -> env.log "Invalid arguments"
                 Unit
             member this.Help = "Adds or removes a word from the awake list"
+    [<AestasCommand("info", AestasCommandDomain.All)>]
+    type Info() =
+        interface ICommand with
+            member this.Execute (env, args) =
+                let system = System.Environment.OSVersion.VersionString
+                let machine = System.Environment.MachineName
+                let cpuCore = System.Environment.ProcessorCount
+                let cpuName = 
+                    if System.Environment.OSVersion.Platform = System.PlatformID.Unix then
+                        (bash "cat /proc/cpuinfo | grep 'model name' | uniq | cut -d ':' -f 2").Trim()
+                    else
+                        (cmd " wmic cpu get name | find /V \"Name\"").Trim()
+                let ipinfo =
+                    use web = new System.Net.Http.HttpClient()
+                    web.GetStringAsync("http://ip-api.com/line/").Result.Split('\n')
+                env.log $"""System Info:
+| System: {system}
+| Machine: {machine}
+| CPU: {cpuName}
+| CPU Core: {cpuCore}
+| IP: {ipinfo[1]} {ipinfo[4]} {ipinfo[5]}, {ipinfo[11]}"""
+                Unit
+            member this.Help = "Prints system infos"
     

@@ -43,7 +43,7 @@ module Prim =
         sb.Append("\nFollowing is a dictionary for you.\n") |> ignore
         for dic in db do
             for p in dic do
-                sb.Append($"{p.Key}: {p.Value}\n") |> ignore
+                sb.Append('\n').Append(p.Key).Append(": ").Append(p.Value) |> ignore
         sb.ToString()
     let colorAt (arr: byte[]) w x y =
         let i = 4*(w*y+x)
@@ -55,3 +55,27 @@ module Prim =
         for _ = 1 to length do
             sb.Append(chars[rand.Next(chars.Length)]) |> ignore
         sb.ToString()
+    let bash (cmd: string) =
+        let psi = Diagnostics.ProcessStartInfo("/bin/bash", $"-c \"{cmd}\"")
+        psi.RedirectStandardOutput <- true
+        psi.UseShellExecute <- false
+        psi.CreateNoWindow <- true
+        use p = new Diagnostics.Process()
+        p.StartInfo <- psi
+        p.Start() |> ignore
+        let result = p.StandardOutput.ReadToEnd()
+        p.WaitForExit() |> ignore
+        p.Kill()
+        result
+    let cmd (cmd: string) =
+        let psi = Diagnostics.ProcessStartInfo("cmd", $"/c \"{cmd}\"")
+        psi.RedirectStandardOutput <- true
+        psi.UseShellExecute <- false
+        psi.CreateNoWindow <- true
+        use p = new Diagnostics.Process()
+        p.StartInfo <- psi
+        p.Start() |> ignore
+        let result = p.StandardOutput.ReadToEnd()
+        p.WaitForExit() |> ignore
+        p.Kill()
+        result
