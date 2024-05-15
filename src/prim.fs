@@ -40,10 +40,10 @@ module Prim =
     let buildDatabasePrompt (system: string) (db: arrList<Dictionary<string, string>>) = 
         let sb = StringBuilder()
         sb.Append(system) |> ignore
-        sb.Append("\nFollowing is a dictionary for you.\n") |> ignore
+        sb.Append("*Following is a dictionary for you:*") |> ignore
         for dic in db do
             for p in dic do
-                sb.Append('\n').Append(p.Key).Append(": ").Append(p.Value) |> ignore
+                sb.Append(';').Append(p.Key).Append(": ").Append(p.Value) |> ignore
         sb.ToString()
     let colorAt (arr: byte[]) w x y =
         let i = 4*(w*y+x)

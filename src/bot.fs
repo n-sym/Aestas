@@ -318,7 +318,7 @@ module rec AestasBot =
                     let profile = if isPrivate then "profiles/chat_info_private_gemini.json" else "profiles/chat_info_group_gemini.json"
                     let model = 
                         match command[1] with
-                        | "15" -> IChatClient.Create<GeminiClient> [|profile|]
+                        | "15" -> IChatClient.Create<GeminiClient> [|profile; false|]
                         | "10" -> IChatClient.Create<Gemini10Client> [|profile; ""|]
                         | "vespera" -> IChatClient.Create<Gemini10Client> [|profile; "vespera-k7ejxi4vj84j"|]
                         | _ -> 

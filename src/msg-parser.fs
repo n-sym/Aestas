@@ -17,7 +17,9 @@ module rec MessageParser =
         let rec innerRec i =
             let checkCache() = 
                 if cache.Length > 0 then
-                    new TextEntity(cache.ToString()) |> result.Add
+                    let t = cache.ToString()
+                    if t |> String.IsNullOrWhiteSpace |> not then 
+                        new TextEntity(cache.ToString()) |> result.Add
                     cache.Clear() |> ignore
             let sticker e =
                 if media.stickers.ContainsKey e then
@@ -75,6 +77,7 @@ module rec MessageParser =
                 cache.Append(botOut[i]) |> ignore
                 innerRec (i+1)
         innerRec 0
+        printfn "Parsed bot out: %A" result
         result
     let scanParen cache s i =
         if s[i] = ')' || s[i] = '）' then (i+1)

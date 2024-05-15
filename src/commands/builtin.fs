@@ -43,13 +43,19 @@ module AestasBuiltinCommands =
             member this.Execute (env, args) =
                 let profile x = 
                     if isPrivate env.chain then $"profiles/chat_info_private_{x}.json" else $"profiles/chat_info_group_{x}.json"
+                let inline change model = env.model.Value <- model;env.log $"Model switched to \"{model.GetType()}\"";
                 match args with
+                | Identifier "help"::[] ->
+                    env.log "Usage: switch [list] [modelName: string]"
+                | Identifier "list"::[] ->
+                    env.log "Available models: unit, gemini, geminif, gemini10, ernie35, ernie35p, ernie40, ernie40p, erniechara, cohere"
                 | String name::[]
                 | Identifier name::[] ->
                     let model = 
                         match name with
                         | "unit" -> UnitClient() :> IChatClient
-                        | "gemini" -> IChatClient.Create<GeminiClient>[|profile "gemini"|]
+                        | "gemini" -> IChatClient.Create<GeminiClient>[|profile "gemini"; false|]
+                        | "geminif" -> IChatClient.Create<GeminiClient>[|profile "gemini"; true|]
                         | "gemini10" -> IChatClient.Create<Gemini10Client>[|profile "gemini"; ""|]
                         | "ernie35" -> IChatClient.Create<ErnieClient>[|profile "ernie"; Ernie_35|]
                         | "ernie35p" -> IChatClient.Create<ErnieClient>[|profile "ernie"; Ernie_35P|]
@@ -58,9 +64,9 @@ module AestasBuiltinCommands =
                         | "erniechara" -> IChatClient.Create<ErnieClient>[|profile "ernie"; Ernie_Chara|]
                         | "cohere" -> IChatClient.Create<CohereClient>[|profile "cohere"|]
                         | _ -> failwith $"Could not find model {name}"
-                    env.model.Value <- model
-                    env.log $"Model switched to \"{name}\""; Unit
-                | _ -> env.log "Invalid arguments"; Unit
+                    change model
+                | _ -> env.log "Invalid arguments";
+                Unit
             member this.Help = "Switches the model"
     [<AestasCommand("dump", AestasCommandDomain.All)>]
     type Dump() =
@@ -85,6 +91,8 @@ module AestasBuiltinCommands =
             member this.Execute (env, args) =
                 match args with
                 | [] -> env.log "Invalid arguments"
+                | Identifier "help"::[] ->
+                    env.log "Usage: awakeme [create|remove|update|list] [word: string] [chance: number]"
                 | Identifier "create"::String s::Number n::[]
                 | String s::Number n::[] -> 
                     env.aestas.awakeMe.Add(s, n)
@@ -140,12 +148,14 @@ module AestasBuiltinCommands =
         interface ICommand with
             member this.Execute (env, args) =
                 match args with
+                | Identifier "help"::[] ->
+                    env.log "Usage: notes [clear|print]"
                 | Identifier "clear"::[] ->
                     env.aestas.notes.Clear()
                     env.log "Cleared notes"
                 | [] | Identifier "print"::[] ->
                     let sb = StringBuilder()
-                    sb.Append("Notes:") |> ignore
+                    sb.Append("Notebook:") |> ignore
                     for note in env.aestas.notes do
                         sb.Append('\n').Append(note) |> ignore
                     sb.ToString() |> env.log;

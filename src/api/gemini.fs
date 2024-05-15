@@ -56,7 +56,7 @@ module Gemini =
             return Ok result
         else return Error result
         }
-type GeminiClient (profile: string) =
+type GeminiClient (profile: string, flash: bool) =
     let chatInfo = 
         use file = File.OpenRead(profile)
         use reader = new StreamReader(file)
@@ -89,7 +89,9 @@ type GeminiClient (profile: string) =
     let receive input send =
         async {
             let! response = 
-                let apiLink = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent"
+                let apiLink = 
+                    if flash then  "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent"
+                    else "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent"
                 let temp = arrList(messages.contents)
                 temp.Add {role = "user"; parts = [|{text = input}|]}
                 let system =

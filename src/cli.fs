@@ -71,7 +71,7 @@ module Cli =
                             mainLoop()
                         else
                             match command[1] with
-                            | "15" -> client <- GeminiClient "profiles/chat_info_private_gemini.json" :> IChatClient
+                            | "15" -> client <- GeminiClient ("profiles/chat_info_private_gemini.json", false) :> IChatClient
                             | "10" -> client <- Gemini10Client ("profiles/chat_info_private_gemini.json", "") :> IChatClient
                             | _ -> 
                                 command[1] <- "default:10"
