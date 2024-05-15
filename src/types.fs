@@ -19,6 +19,7 @@ module rec AestasTypes =
         privateCommands: Dictionary<string, ICommand>
         groupCommands: Dictionary<string, ICommand>
         awakeMe: Dictionary<string, float32> 
+        notes: Notes
     }
     type MultiMediaParser = {
         image2text: (byte[] -> string) option
@@ -55,7 +56,31 @@ module rec AestasTypes =
     | String of string
     | Identifier of string
     | Unit
-    
+    type Notes() =
+        let data = Array.zeroCreate<string> 30
+        let mutable cursor = 0
+        let mutable readPos = -1
+        member _.Add s =
+            data[cursor] <- s
+            cursor <- (cursor+1) % 30
+        member _.Clear() =
+            for i = 0 to 29 do data[i] <- null
+            cursor <- 0
+        interface IEnumerable<string> with
+            member this.GetEnumerator() = this :> IEnumerator<string>
+        interface IEnumerator<string> with
+            member _.Current = data[readPos]
+            member _.Dispose() = readPos <- -1
+        interface System.Collections.IEnumerable with
+            member this.GetEnumerator() = this :> System.Collections.IEnumerator
+        interface System.Collections.IEnumerator with
+            member _.Current = data[readPos] :> obj
+            member _.MoveNext() =
+                if readPos = 30 || data[readPos+1] |> System.String.IsNullOrEmpty then false
+                else
+                    readPos <- readPos + 1; true
+            member _.Reset() = readPos <- -1
+                
     type IChatClient with
         static member Create<'t when 't :> IChatClient> (p: obj[]) =
             try

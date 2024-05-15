@@ -48,6 +48,7 @@ module AestasBuiltinCommands =
                 | Identifier name::[] ->
                     let model = 
                         match name with
+                        | "unit" -> UnitClient() :> IChatClient
                         | "gemini" -> IChatClient.Create<GeminiClient>[|profile "gemini"|]
                         | "gemini10" -> IChatClient.Create<Gemini10Client>[|profile "gemini"; ""|]
                         | "ernie35" -> IChatClient.Create<ErnieClient>[|profile "ernie"; Ernie_35|]
@@ -84,9 +85,11 @@ module AestasBuiltinCommands =
             member this.Execute (env, args) =
                 match args with
                 | [] -> env.log "Invalid arguments"
+                | Identifier "create"::String s::Number n::[]
                 | String s::Number n::[] -> 
                     env.aestas.awakeMe.Add(s, n)
                     env.log $"Added {s} to awake dictionary with {n}"
+                | Identifier "create"::String s::[]
                 | String s::[] ->
                     env.aestas.awakeMe.Add(s, 1.0f)
                     env.log $"Added {s} to awake dictionary with 1.0"
@@ -94,6 +97,11 @@ module AestasBuiltinCommands =
                     if env.aestas.awakeMe.ContainsKey s then
                         env.aestas.awakeMe.Remove(s) |> ignore
                         env.log $"Removed {s} from awake dictionary"
+                    else env.log $"Could not find {s} in awake dictionary"
+                | Identifier "update"::String s::Number n::[] ->
+                    if env.aestas.awakeMe.ContainsKey s then
+                        env.aestas.awakeMe[s] <- n
+                        env.log $"Updated {s} in awake dictionary with {n}"
                     else env.log $"Could not find {s} in awake dictionary"
                 | Identifier "list"::[] ->
                     let sb = StringBuilder()
@@ -103,7 +111,7 @@ module AestasBuiltinCommands =
                     sb.ToString() |> env.log;
                 | _ -> env.log "Invalid arguments"
                 Unit
-            member this.Help = "Adds or removes a word from the awake list"
+            member this.Help = "Adds or removes a word from the awake dictionary"
     [<AestasCommand("info", AestasCommandDomain.All)>]
     type Info() =
         interface ICommand with
@@ -127,4 +135,21 @@ module AestasBuiltinCommands =
 | IP: {ipinfo[1]} {ipinfo[4]} {ipinfo[5]}, {ipinfo[11]}"""
                 Unit
             member this.Help = "Prints system infos"
+    [<AestasCommand("notes", AestasCommandDomain.All)>]
+    type Notes() =
+        interface ICommand with
+            member this.Execute (env, args) =
+                match args with
+                | Identifier "clear"::[] ->
+                    env.aestas.notes.Clear()
+                    env.log "Cleared notes"
+                | [] | Identifier "print"::[] ->
+                    let sb = StringBuilder()
+                    sb.Append("Notes:") |> ignore
+                    for note in env.aestas.notes do
+                        sb.Append('\n').Append(note) |> ignore
+                    sb.ToString() |> env.log;
+                | _ -> env.log "Invalid arguments"
+                Unit
+            member this.Help = "Examine the notes"
     

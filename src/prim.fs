@@ -6,7 +6,7 @@ open Newtonsoft.Json
 open Newtonsoft.Json.Linq
 open Microsoft.FSharp.Reflection
 module Prim = 
-    let version = Version(0, 240511)
+    let version = Version(0, 240515)
     type FSharpOptionConverter() =
         inherit JsonConverter()
             override _.CanConvert(objectType: Type) =

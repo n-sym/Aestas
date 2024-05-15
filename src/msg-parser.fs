@@ -11,7 +11,7 @@ open AestasTypes
 open Lagrange.Core.Message
 open Lagrange.Core.Message.Entity
 module rec MessageParser =
-    let parseBotOut (media: MultiMediaParser) (botOut: string) =
+    let parseBotOut (notes: Notes) (media: MultiMediaParser) (botOut: string) =
         let cache = StringBuilder()
         let result = arrList<IMessageEntity>()
         let rec innerRec i =
@@ -62,6 +62,10 @@ module rec MessageParser =
                     let colon = e.IndexOf(':')
                     if sticker e[colon+1..] |> not then
                         new TextEntity($"[{e}]") |> result.Add
+                elif e.StartsWith "note" then
+                    let colon = e.IndexOf(':')
+                    let note = e[colon+1..]
+                    notes.Add note
                 else 
                     if sticker e |> not then
                         new TextEntity($"[{e}]") |> result.Add

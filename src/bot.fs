@@ -57,15 +57,24 @@ module rec AestasBot =
             c.Protocol <- Protocols.Linux
             c;
             , deviceInfo, keyStore)
-        let preChat (model: IChatClient) =
+        let notes = new Notes()
+        let preChat (notes: Notes) (model: IChatClient) =
             if model.DataBase.Count = 0 then model.DataBase.Add(Dictionary())
             if model.DataBase[0].ContainsKey("time") |> not then model.DataBase[0].Add("time", "")
+            if model.DataBase[0].ContainsKey("notebook") |> not then model.DataBase[0].Add("notebook", "")
             model.DataBase[0]["time"] <- DateTime.Now.ToString()
+            model.DataBase[0]["notebook"] <-
+                let sb = StringBuilder()
+                sb.Append '[' |> ignore
+                for note in notes do
+                    sb.Append(note).Append(',') |> ignore
+                sb.Append ']' |> ignore
+                sb.ToString()
         let aestas = {
             privateChats = Dictionary()
             groupChats = Dictionary()
-            prePrivateChat = preChat
-            preGroupChat = preChat
+            prePrivateChat = preChat notes
+            preGroupChat = preChat notes
             postPrivateChat = (fun _ -> ())
             postGroupChat = (fun _ -> ())
             media = {
@@ -88,6 +97,7 @@ module rec AestasBot =
             groupCommands = getCommands(fun a -> 
                 a.Domain &&& AestasCommandDomain.Group <> AestasCommandDomain.None)
             awakeMe = loadAwakeMe()
+            notes = notes
         }
         (fun context event -> 
             printfn "%A" event
@@ -97,8 +107,12 @@ module rec AestasBot =
             bot.UpdateKeystore() |> saveKeyStore
             //bot.FetchCustomFace().Result |> printfn "%A"
         ) |> bot.Invoker.add_OnBotOnlineEvent
+        (fun context event -> 
+            printfn "Captcha! %A" event
+        ) |> bot.Invoker.add_OnBotCaptchaEvent
         privateChat aestas |> bot.Invoker.add_OnFriendMessageReceived
         groupChat aestas |> bot.Invoker.add_OnGroupMessageReceived
+        privatePoke aestas (Dictionary<uint32, DateTime>()) |> bot.Invoker.add_OnFriendPokeEvent
         login keyStore bot
         Console.ReadLine() |> ignore
     let saveKeyStore keyStore =
@@ -139,8 +153,25 @@ module rec AestasBot =
             IChatClient.Create<ErnieClient> [|"profiles/chat_info_group_ernie.json"; Ernie_35P|])
         let chat = aestas.privateChats[event.Chain.FriendUin]
         aestas.prePrivateChat chat
-        chat.Turn $"{{{event.Chain.FriendInfo.Nickname}}} {dialog}" (buildElement context aestas.media event.Chain.FriendUin true)
+        chat.Turn $"{{{event.Chain.FriendInfo.Nickname}}} {dialog}" (buildElement context aestas.notes aestas.media event.Chain.FriendUin true)
         aestas.postPrivateChat chat
+        with e -> printfn "Error: %A" e
+        } |> Async.Start
+    let privatePoke aestas pokeTimeStamp context event =
+        async {
+        if pokeTimeStamp.ContainsKey context.BotUin then () 
+        else pokeTimeStamp.Add(context.BotUin, DateTime(0L))
+        if event.EventTime - pokeTimeStamp[context.BotUin] < TimeSpan(0, 0, 1) then () else
+        printfn "poke from %d, at %A" event.FriendUin event.EventTime
+        pokeTimeStamp[context.BotUin] <- event.EventTime
+        if event.FriendUin = context.BotUin then () else
+        let dialog = "(poke you)"
+        try
+        if aestas.privateChats.ContainsKey(event.FriendUin) |> not then 
+            aestas.privateChats.Add(event.FriendUin, 
+            IChatClient.Create<ErnieClient> [|"profiles/chat_info_group_ernie.json"; Ernie_35P|])
+        let chat = aestas.privateChats[event.FriendUin]
+        chat.Turn dialog (buildElement context aestas.notes aestas.media event.FriendUin true)
         with e -> printfn "Error: %A" e
         } |> Async.Start
     let groupChat aestas context event =
@@ -187,7 +218,7 @@ module rec AestasBot =
                 sb.Append('{').Append(name).Append('}') |> ignore
                 sb.Append(' ').Append(dialog).ToString()
             aestas.preGroupChat chat
-            chat.Turn dialog (buildElement context aestas.media event.Chain.GroupUin.Value false)
+            chat.Turn dialog (buildElement context aestas.notes aestas.media event.Chain.GroupUin.Value false)
             aestas.postGroupChat chat
             with e -> printfn "Error: %A" e
         else
@@ -216,9 +247,9 @@ module rec AestasBot =
                         f.GroupMemberInfo.MemberName
                     else f.GroupMemberInfo.MemberCard
                 $"{{{name}}} {f |> MessageParser.parseElements flag (getMsgGroup context chain aestas flag) aestas.media}"
-    let buildElement context media id isPrivate (s: string) =
+    let buildElement context notes media id isPrivate (s: string) =
         async {
-        let es = MessageParser.parseBotOut media s
+        let es = MessageParser.parseBotOut notes media s
         let newContent() = if isPrivate then MessageBuilder.Friend(id) else MessageBuilder.Group(id)
         let mutable content = newContent()
         let send (content: MessageBuilder) =
@@ -233,10 +264,10 @@ module rec AestasBot =
                 send content
                 content <- newContent()
                 e |> newContent().Add |> send
-            | :? MarketFaceEntity as m ->
-                send content
-                content <- newContent()
-                newContent().Add(e).Add(new TextEntity(m.Summary)) |> send
+            // | :? MarketFaceEntity as m ->
+            //     send content
+            //     content <- newContent()
+            //     newContent().Add(e).Add(new TextEntity(m.Summary)) |> send
             | _ -> content.Add e |> ignore
         send content
         }
