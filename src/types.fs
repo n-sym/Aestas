@@ -76,7 +76,7 @@ module rec AestasTypes =
         interface System.Collections.IEnumerator with
             member _.Current = data[readPos] :> obj
             member _.MoveNext() =
-                if readPos = 30 || data[readPos+1] |> System.String.IsNullOrEmpty then false
+                if readPos >= 29  || data[readPos+1] |> System.String.IsNullOrEmpty then false
                 else
                     readPos <- readPos + 1; true
             member _.Reset() = readPos <- -1
