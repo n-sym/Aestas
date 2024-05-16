@@ -102,6 +102,10 @@ type GeminiClient (profile: string, flash: bool) =
             match response with
             | Ok result ->
                 let response = JsonConvert.DeserializeObject<GResponse>(result).candidates[0].content.parts[0].text
+                // gemini often return line break which seems redundant, so we need to remove it
+                // they will increase these line breaks when they learn from context, so must remove it
+                // their website (aistudio.google.com) also do that....
+                let response = if response.EndsWith('\n') then response.TrimEnd() else response
                 do! send response
                 messages.contents.Add {role = "user"; parts = [|{text = input}|]}
                 messages.contents.Add {role = "model"; parts = [|{text = response}|]}

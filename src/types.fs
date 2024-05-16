@@ -50,8 +50,10 @@ module rec AestasTypes =
     }
     type Ast =
     | Call of Ast list
+    | Tuple of Ast list
     | Atom of Atom
     and Atom =
+    | AtomTuple of Atom list
     | Number of float32
     | String of string
     | Identifier of string

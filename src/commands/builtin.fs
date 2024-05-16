@@ -9,12 +9,12 @@ open AestasTypes
 module AestasBuiltinCommands =
     let private isPrivate (chain: MessageChain) = 
         chain.GroupUin.HasValue |> not
-    [<AestasCommand("identity", AestasCommandDomain.All)>]
+    [<AestasCommand("id", AestasCommandDomain.All)>]
     type Identity() =
         interface ICommand with
             member this.Execute (env, args) =
                 args[0]
-            member this.Help = "Identity Command"
+            member this.Help = "Identity command"
     [<AestasCommand("version", AestasCommandDomain.All)>]
     type Version() =
         interface ICommand with
@@ -92,7 +92,7 @@ module AestasBuiltinCommands =
                 match args with
                 | [] -> env.log "Invalid arguments"
                 | Identifier "help"::[] ->
-                    env.log "Usage: awakeme [create|remove|update|list] [word: string] [chance: number]"
+                    env.log "Usage: awakeme [ create | remove | update | list ] [word: string] [chance: number]"
                 | Identifier "create"::String s::Number n::[]
                 | String s::Number n::[] -> 
                     env.aestas.awakeMe.Add(s, n)
@@ -149,7 +149,7 @@ module AestasBuiltinCommands =
             member this.Execute (env, args) =
                 match args with
                 | Identifier "help"::[] ->
-                    env.log "Usage: notes [clear|print]"
+                    env.log "Usage: notes [ clear | print ]"
                 | Identifier "clear"::[] ->
                     env.aestas.notes.Clear()
                     env.log "Cleared notes"
@@ -162,4 +162,23 @@ module AestasBuiltinCommands =
                 | _ -> env.log "Invalid arguments"
                 Unit
             member this.Help = "Examine the notes"
+    [<AestasCommand("op", AestasCommandDomain.All)>]
+    type DoOperators() =
+        interface ICommand with
+            member this.Execute (env, args) =
+                match args with
+                | Identifier "help"::[] ->
+                    env.log "Usage: op [ + | - | * | / ] [x: number] [y: number]"; Unit
+                | String "+"::Number x::Number y::[] ->
+                    Number (x + y)
+                | String "-"::Number x::Number y::[] ->
+                    Number (x - y)
+                | String "*"::Number x::Number y::[] ->
+                    Number (x * y)
+                | String "/"::Number x::Number y::[] ->
+                    Number (x / y)
+                | String "%"::Number x::Number y::[] ->
+                    Number (x % y)
+                | _ -> env.log "Invalid arguments"; Unit
+            member this.Help = "For fun"
     

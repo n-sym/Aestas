@@ -358,7 +358,7 @@ module rec AestasBot =
                 else let x = UnitClient() in aestas.groupChats.Add(id, (x, arrList())); ref x
             {aestas = aestas; context = context; chain = msgs; commands = aestas.groupCommands; log = print; model = model}
             |> excecute <| source
-            aestas.groupChats[id] <- model.Value, snd aestas.groupChats[id]
+            aestas.groupChats[id] <- model.Value, if aestas.groupChats[id] |> fst = model.Value then snd aestas.groupChats[id] else arrList()
         true
         with | ex -> print $"Error: {ex}"; true
     

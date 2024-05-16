@@ -50,6 +50,16 @@ module Command =
     let newLine = [|'\n';'\r';'`'|]
     let rec private excecuteAst (env: CommandEnvironment) (ast: Ast) =
         match ast with
+        | Tuple items ->
+            let rec go acc = function
+            | Call h::t ->
+                go (excecuteAst env (Call h)::acc) t
+            | Tuple h::t ->
+                go (excecuteAst env (Tuple h)::acc) t
+            | Atom h::t ->
+                go (h::acc) t
+            | [] -> acc |> List.rev |> AtomTuple
+            go [] items
         | Call args ->
             let func = args.Head
             let args = List.map (fun x -> excecuteAst env x) args.Tail
