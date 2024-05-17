@@ -80,8 +80,9 @@ module Command =
                 env.log <| $"Expected identifier, but found {x}"
                 Unit
         | Atom x -> x
+    let LanguagePack = makeLanguagePack keywords symbols newLine
     let excecute (env: CommandEnvironment) (cmd: string) =
-        let tokens = scanWithoutMacro (makeLanguagePack keywords symbols newLine) cmd
+        let tokens = scanWithoutMacro LanguagePack cmd
         let ast, _, errors = parse tokens []
         printfn "%A,%A,%A" tokens ast errors
         match errors with

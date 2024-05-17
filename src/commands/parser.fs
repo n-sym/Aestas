@@ -6,6 +6,7 @@ open System.Linq
 open Aestas
 open AestasTypes
 open Lexer
+#nowarn "25"
 module rec Parser =
     let inline private eatSpace tokens =
         match tokens with
@@ -45,9 +46,19 @@ module rec Parser =
     let parse tokens errors = 
         parseAbstractTuple TokenComma false Tuple true parseTupleItem "Expected expression" (Atom Unit) tokens errors
     let rec parseTupleItem (tokens: Token list) (errors: string list) =
+        let l, tokens, errors = parseExpr tokens errors
+        match eatSpace tokens with
+        | TokenPipe::r
+        | TokenRightPipe::r ->
+            let (Call args), tokens, errors = parseTupleItem r errors
+            Call (args.Head::l::args.Tail), tokens, errors
+        | _ -> l, tokens, errors
+    let rec parseExpr (tokens: Token list) (errors: string list) =
         let rec go tokens acc errors =
             match tokens with
-            | [] -> acc |> List.rev, [], errors
+            | TokenSpace::TokenPipe::xs
+            | TokenSpace::TokenRightPipe::xs
+            | TokenSpace::TokenRightRound::xs -> acc |> List.rev, xs, errors
             | TokenSpace::TokenLeftRound::xs
             | TokenLeftRound::xs ->
                 match parse xs errors |> eatSpaceOfTuple with

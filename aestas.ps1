@@ -91,19 +91,14 @@ function Init {
     Write-Output "Initialization complete."
 }
 $usage = "Usage: aestas.ps1 [ build | run | cli | init ]"
-if ($args.Length -ne 1) {
-    Write-Output $usage
-}
-else {
+if ($args.Length -eq 1) {
     if ($args[0] -eq "build") {
         dotnet build --configuration Release
     }
     elseif ($args[0] -eq "run") {
-        dotnet build --configuration Release
         dotnet bin/Release/net8.0/aestas.dll run
     }
     elseif ($args[0] -eq "cli") {
-        dotnet build --configuration Release
         dotnet bin/Release/net8.0/aestas.dll cli
     }
     elseif ($args[0] -eq "init") {
@@ -112,4 +107,19 @@ else {
     else {
         Write-Output $usage
     }
+}
+elseif ($args[0] -eq "cmdlex" -and $args.Length -eq 2) {
+    Add-Type -Path bin/Release/net8.0/aestas.dll
+    $lp = [Aestas.Commands.Command]::languagePack
+    [Aestas.Commands.Lexer]::scanWithoutMacro($lp, $args[1]).ToString()
+}
+elseif ($args[0] -eq "cmdparse" -and $args.Length -eq 2) {
+    Add-Type -Path bin/Release/net8.0/aestas.dll
+    $lp = [Aestas.Commands.Command]::languagePack
+    $tokens = [Aestas.Commands.Lexer]::scanWithoutMacro($lp, $args[1])
+    [Aestas.Commands.Parser]::parse($tokens, [Microsoft.FSharp.Collections.ListModule]::Empty[System.String]()).ToString()
+}
+else {
+    Write-Output $usage
+    
 }

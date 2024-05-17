@@ -9,6 +9,7 @@ module ErrorMessage =
     let stringEof = "String literal arrives the end of file"
     let commnetEof = "Comment literal arrives the end of file"
     let inline unkownSymbol t = $"Could not recognize this symbol \"{t}\""
+#nowarn "25"
 module rec Lexer =
     type Token =
     | TokenSpace
