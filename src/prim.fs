@@ -1,33 +1,19 @@
 namespace Aestas
 open System
 open System.Text
+open System.Text.Json
+open System.Text.Json.Serialization
 open System.Collections.Generic
-open Newtonsoft.Json
-open Newtonsoft.Json.Linq
-open Microsoft.FSharp.Reflection
 module Prim = 
-    let version = Version(0, 240516)
-    type FSharpOptionConverter() =
-        inherit JsonConverter()
-            override _.CanConvert(objectType: Type) =
-                objectType.IsGenericType && objectType.GetGenericTypeDefinition() = typedefof<option<_>>
-            override _.ReadJson(reader: JsonReader, objectType: Type, existingValue: obj, serializer: JsonSerializer) =
-                if reader.TokenType = JsonToken.Null then
-                    None
-                else
-                    let valueType = objectType.GetGenericArguments()[0]
-                    let value = serializer.Deserialize(reader, valueType)
-                    Activator.CreateInstance((typedefof<option<_>>).MakeGenericType([|valueType|]), [|value|])
-            override _.WriteJson(writer: JsonWriter, value: obj, serializer: JsonSerializer) =
-                match value with
-                | null -> serializer.Serialize(writer, null)
-                | _ ->
-                    let innerValue = FSharpValue.GetUnionFields(value, value.GetType())
-                    serializer.Serialize(writer, innerValue)
-    let JsonDeserializeObjectWithOption<'t> x = 
-        let s = JsonSerializerSettings()
-        s.Converters.Add(FSharpOptionConverter())
-        JsonConvert.DeserializeObject<'t>(x, s)
+    let version = Version(0, 240517)
+    let fsOptions = 
+        JsonFSharpOptions.Default()
+            .WithSkippableOptionFields(SkippableOptionFields.Always, true)
+            .ToJsonSerializerOptions()
+    let inline JsonDeserializeFs<'t> (x: string) = 
+        JsonSerializer.Deserialize<'t>(x, fsOptions)
+    let inline JsonSerializeFs (x: 't) = 
+        JsonSerializer.Serialize<'t>(x, fsOptions)
     type 't arrList = ResizeArray<'t>
     type System.Collections.Generic.List<'t> with
         member this.GetReverseIndex(_:int, offset) = this.Count-offset-1

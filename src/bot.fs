@@ -2,10 +2,10 @@ namespace Aestas
 open System.Collections.Generic
 open System.IO
 open System.Text
+open System.Text.Json
 open System.Text.RegularExpressions
 open System.Linq
 open System.Reflection
-open Newtonsoft.Json
 open System
 open Lagrange.Core
 open Lagrange.Core.Common
@@ -35,19 +35,19 @@ module rec AestasBot =
             try
             use file = File.OpenRead("keystore.json")
             use reader = new StreamReader(file)
-            JsonConvert.DeserializeObject<BotKeystore>(reader.ReadToEnd())
+            JsonSerializer.Deserialize<BotKeystore>(reader.ReadToEnd())
             with _ -> new BotKeystore()
         let deviceInfo =
             try
             use file = File.OpenRead("deviceinfo.json")
             use reader = new StreamReader(file)
-            JsonConvert.DeserializeObject<BotDeviceInfo>(reader.ReadToEnd())
+            JsonSerializer.Deserialize<BotDeviceInfo>(reader.ReadToEnd())
             with _ -> 
                 let d = BotDeviceInfo.GenerateInfo()
                 d.DeviceName <- "Aestas@Lagrange-" + Prim.randomString 6
                 d.SystemKernel <- Environment.OSVersion.VersionString
                 d.KernelVersion <- Environment.OSVersion.Version.ToString()
-                File.WriteAllText("deviceinfo.json", JsonConvert.SerializeObject(d))
+                File.WriteAllText("deviceinfo.json", JsonSerializer.Serialize(d))
                 d
         use bot = BotFactory.Create(
             let c = new BotConfig() in
@@ -116,7 +116,7 @@ module rec AestasBot =
         login keyStore bot
         Console.ReadLine() |> ignore
     let saveKeyStore keyStore =
-        File.WriteAllText("keystore.json", JsonConvert.SerializeObject(keyStore))
+        File.WriteAllText("keystore.json", JsonSerializer.Serialize(keyStore))
     let login keyStore bot =
         printfn "Try login.."
         if keyStore.Uid |> String.IsNullOrEmpty then
@@ -371,7 +371,7 @@ module rec AestasBot =
         let result = Dictionary<string, Sticker>()
         try
         let json = 
-            File.ReadAllText("profiles/stickers.json") |> JsonConvert.DeserializeObject<_Stickers>
+            File.ReadAllText("profiles/stickers.json") |> JsonSerializer.Deserialize<_Stickers>
         for p in json.from_file do
             let data = File.ReadAllBytes p.Value
             result.Add(p.Key, data |> ImageSticker)
@@ -382,6 +382,6 @@ module rec AestasBot =
 
     let loadAwakeMe() =
         try
-        File.ReadAllText("profiles/awake_me.json") |> JsonConvert.DeserializeObject<Dictionary<string, float32>>
+        File.ReadAllText("profiles/awake_me.json") |> JsonSerializer.Deserialize<Dictionary<string, float32>>
         with
         | _ -> Dictionary()

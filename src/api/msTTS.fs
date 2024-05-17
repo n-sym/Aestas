@@ -4,9 +4,8 @@ open System.IO
 open System.Net.Http
 open System.Net.Http.Headers
 open System.Collections.Generic
-open Newtonsoft.Json
 open System.Text
-open Newtonsoft.Json.Linq
+open System.Text.Json
     
 type MsTTS_Profile = {subscriptionKey: string; subscriptionRegion: string; voiceName: string; outputFormat: string;}
 
@@ -15,7 +14,7 @@ type MsTTS_Client(profile: string) =
         use file = File.OpenRead(profile)
         use reader = new StreamReader(file)
         let json = reader.ReadToEnd()
-        JsonConvert.DeserializeObject<MsTTS_Profile>(json)
+        JsonSerializer.Deserialize<MsTTS_Profile>(json)
 
     // let upload (file: byte[]) (upHost: string) =
     //     let url = upHost

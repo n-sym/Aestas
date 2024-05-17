@@ -62,10 +62,16 @@ module Command =
             go [] items
         | Call args ->
             let func = args.Head
-            let args = List.map (fun x -> excecuteAst env x) args.Tail
             match excecuteAst env func with
+            | Identifier "conslog" ->
+                if args.Tail.Tail.IsEmpty |> not then env.log "To much arguments, try use tuple."; Unit else
+                let conslog = printfn "At %d %s" (if env.chain.GroupUin.HasValue then env.chain.GroupUin.Value else env.chain.FriendUin)
+                let result = excecuteAst {aestas = env.aestas; context = env.context; chain = env.chain; commands = env.commands; log = conslog; model = env.model } args.Tail.Head
+                conslog $"returns {result}"
+                Unit
             | Identifier name ->
                 if env.commands.ContainsKey name then
+                    let args = List.map (fun x -> excecuteAst env x) args.Tail
                     env.commands[name].Execute(env, args)
                 else
                     env.log <| $"Command not found: {name}"

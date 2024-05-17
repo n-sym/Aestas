@@ -4,9 +4,8 @@ open System.IO
 open System.Net.Http
 open System.Net.Http.Headers
 open System.Collections.Generic
-open Newtonsoft.Json
 open System.Text
-open Newtonsoft.Json.Linq
+open System.Text.Json
 open Aestas
 open Prim
 type GText = {text: string}
@@ -24,8 +23,9 @@ type GSafetyThreshold =
 | BLOCK_MEDIUM_AND_ABOVE
 | BLOCK_ONLY_HIGH
 | BLOCK_NONE
-type GProfile = {api_key: string option; gcloudpath: string option; mutable system: string; safetySettings: GSafetySetting[]; max_length: int; database: Dictionary<string, string>[] option}
-type GRequest = {contents: ResizeArray<GContent>; safetySettings: GSafetySetting[]; systemInstruction: GContent}
+type GProfile = {api_key: string option; gcloudpath: string option; mutable system: string; safetySettings: GSafetySetting[]; max_length: int; database: Dictionary<string, string>[] option; generation_configs: Dictionary<string, GenerationConfig> option}
+type GGenerationConfig = {maxOutputTokens: int; temperature: float; topP: float; topK: float}
+type GRequest = {contents: ResizeArray<GContent>; safetySettings: GSafetySetting[]; systemInstruction: GContent; generationConfig: GGenerationConfig option}
 type GCandidate = {content: GContent; finishReason: string; index: int; safetyRatings: GSafetyRatting[]}
 type GResponse = {candidates: GCandidate[]}
 module Gemini =
@@ -61,7 +61,8 @@ type GeminiClient (profile: string, flash: bool) =
         use file = File.OpenRead(profile)
         use reader = new StreamReader(file)
         let json = reader.ReadToEnd()
-        JsonDeserializeObjectWithOption<GProfile>(json)
+        JsonDeserializeFs<GProfile>(json)
+    let model = if flash then "gemini-1.5-flash-latest" else "gemini-1.5-pro-latest"
     let rec convertSaftySettings (l: (GSafetyCategory*GSafetyThreshold) list) =
         match l with
         | [] -> []
@@ -72,7 +73,20 @@ type GeminiClient (profile: string, flash: bool) =
         HARM_CATEGORY_SEXUALLY_EXPLICIT, BLOCK_NONE
         HARM_CATEGORY_DANGEROUS_CONTENT, BLOCK_MEDIUM_AND_ABOVE
     ]
-    let messages = {contents = ResizeArray(); safetySettings = chatInfo.safetySettings; systemInstruction = {role = "system"; parts = [|{text = chatInfo.system}|]}}
+    let messages = {
+        contents = ResizeArray(); 
+        safetySettings = chatInfo.safetySettings; systemInstruction = {role = "system"; 
+        parts = [|{text = chatInfo.system}|]};
+        generationConfig = 
+            match chatInfo.generation_configs with
+            | None -> None
+            | Some gs -> Some {
+                    maxOutputTokens = gs[model].max_length; 
+                    temperature = gs[model].temperature;
+                    topP = gs[model].top_p;
+                    topK = gs[model].top_k
+            }
+        }
     let database = 
         match chatInfo.database with
         | Some db -> ResizeArray(db)
@@ -97,15 +111,17 @@ type GeminiClient (profile: string, flash: bool) =
                 let system =
                     {role = "system"; parts = [|{text = buildDatabasePrompt messages.systemInstruction.parts[0].text database}|]}
                 let messages = 
-                    {contents = temp; safetySettings = chatInfo.safetySettings; systemInstruction = system}
-                Gemini.postRequest chatInfo apiLink (JsonConvert.SerializeObject(messages))
+                    {contents = temp; safetySettings = chatInfo.safetySettings; systemInstruction = system; generationConfig = messages.generationConfig}
+                Gemini.postRequest chatInfo apiLink (JsonSerializer.Serialize(messages))
             match response with
             | Ok result ->
-                let response = JsonConvert.DeserializeObject<GResponse>(result).candidates[0].content.parts[0].text
+                let response = JsonSerializer.Deserialize<GResponse>(result).candidates[0].content.parts[0].text
                 // gemini often return line break which seems redundant, so we need to remove it
                 // they will increase these line breaks when they learn from context, so must remove it
                 // their website (aistudio.google.com) also do that....
                 let response = if response.EndsWith('\n') then response.TrimEnd() else response
+                // gemini 1.5 flash likes \n\n, but i dont like it
+                let response = if flash then response.Replace("\n\n", "\n") else response
                 do! send response
                 messages.contents.Add {role = "user"; parts = [|{text = input}|]}
                 messages.contents.Add {role = "model"; parts = [|{text = response}|]}
@@ -119,7 +135,8 @@ type GeminiClient (profile: string, flash: bool) =
         member _.DataBase = database
         member _.Turn input send = receive input send |> Async.RunSynchronously
         member _.TurnAsync input send = receive input send
-type G10Request = {contents: ResizeArray<GContent>; safetySettings: GSafetySetting[]}
+type G10GenerationConfig = {maxOutputTokens: int; temperature: float; topP: float}
+type G10Request = {contents: ResizeArray<GContent>; safetySettings: GSafetySetting[]; generationConfig: G10GenerationConfig option}
 type Gemini10Client(profile: string, tunedName: string) =
     let apiLink = 
         if tunedName |> String.IsNullOrEmpty then "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.0-pro:generateContent"
@@ -128,8 +145,19 @@ type Gemini10Client(profile: string, tunedName: string) =
         use file = File.OpenRead(profile)
         use reader = new StreamReader(file)
         let json = reader.ReadToEnd()
-        JsonDeserializeObjectWithOption<GProfile>(json)
-    let messages = {contents = ResizeArray(); safetySettings = chatInfo.safetySettings; }
+        JsonDeserializeFs<GProfile>(json)
+    let messages = {
+            contents = ResizeArray(); 
+            safetySettings = chatInfo.safetySettings; 
+            generationConfig = 
+                match chatInfo.generation_configs with
+                | None -> None
+                | Some gs -> Some {
+                        maxOutputTokens = gs["gemini-1.0-pro"].max_length; 
+                        temperature = gs["gemini-1.0-pro"].temperature;
+                        topP = gs["gemini-1.0-pro"].top_p
+                }
+            }
     let _ = 
         messages.contents.Add({role = "user"; parts = [|{text = chatInfo.system}|]})
         messages.contents.Add({role = "model"; parts = [|{text = "Certainly!"}|]})
@@ -155,7 +183,7 @@ type Gemini10Client(profile: string, tunedName: string) =
                     let temp = arrList(messages.contents)
                     temp[0] <- {role = "user"; parts = [|{text = buildDatabasePrompt temp[0].parts[0].text database}|]}
                     temp.Add {role = "user"; parts = [|{text = input}|]}
-                    {contents = temp; safetySettings = chatInfo.safetySettings}
+                    {contents = temp; safetySettings = chatInfo.safetySettings; generationConfig = messages.generationConfig}
                 else 
                     // not support database because i am lazy
                     let sb = StringBuilder()
@@ -169,11 +197,11 @@ type Gemini10Client(profile: string, tunedName: string) =
                     sb.Append "{user}:" |> ignore
                     sb.Append input |> ignore
                     sb.Append "\n{model}:" |> ignore
-                    {contents = ResizeArray([{role = "user"; parts = [|{text = sb.ToString()}|]}]); safetySettings = chatInfo.safetySettings}
-            Gemini.postRequest chatInfo apiLink (JsonConvert.SerializeObject(messages))
+                    {contents = ResizeArray([{role = "user"; parts = [|{text = sb.ToString()}|]}]); safetySettings = chatInfo.safetySettings; generationConfig = messages.generationConfig}
+            Gemini.postRequest chatInfo apiLink (JsonSerializer.Serialize(messages))
         match response with
         | Ok result ->
-            let response = JsonConvert.DeserializeObject<GResponse>(result).candidates[0].content.parts[0].text
+            let response = JsonSerializer.Deserialize<GResponse>(result).candidates[0].content.parts[0].text
             do! send response
             messages.contents.Add {role = "user"; parts = [|{text = input}|]}
             messages.contents.Add {role = "model"; parts = [|{text = response}|]}

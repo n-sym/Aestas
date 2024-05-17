@@ -15,6 +15,12 @@ module AestasBuiltinCommands =
             member this.Execute (env, args) =
                 args[0]
             member this.Help = "Identity command"
+    [<AestasCommand("consout", AestasCommandDomain.All)>]
+    type ConsoleOut() =
+        interface ICommand with
+            member this.Execute (env, args) =
+                args[0]//Dummy
+            member this.Help = "Redirects output to console"
     [<AestasCommand("version", AestasCommandDomain.All)>]
     type Version() =
         interface ICommand with

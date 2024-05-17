@@ -72,6 +72,7 @@ module Cli =
                         else
                             match command[1] with
                             | "15" -> client <- GeminiClient ("profiles/chat_info_private_gemini.json", false) :> IChatClient
+                            | "f" -> client <- GeminiClient ("profiles/chat_info_private_gemini.json", true) :> IChatClient
                             | "10" -> client <- Gemini10Client ("profiles/chat_info_private_gemini.json", "") :> IChatClient
                             | _ -> 
                                 command[1] <- "default:10"
@@ -104,7 +105,8 @@ module Cli =
         else
             match args[0] with
             | "run" ->
-                AestasBot.run()
+                ()
+                //AestasBot.run()
             | "cli" ->
                 run()
                 ()

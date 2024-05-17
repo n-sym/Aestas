@@ -4,12 +4,11 @@ open System.IO
 open System.Net.Http
 open System.Net.Http.Headers
 open System.Collections.Generic
-open Newtonsoft.Json
 open System.Text
-open Newtonsoft.Json.Linq
 
 type Message = {role: string; content: string}
 type Messages = {messages: ResizeArray<Message>; system: string}
+type GenerationConfig = {temperature: float; max_length: int; top_k: int; top_p: float}
 type IChatClient =
     interface
         abstract member Messages: ResizeArray<Message>

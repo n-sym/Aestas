@@ -4,9 +4,8 @@ open System.IO
 open System.Net.Http
 open System.Net.Http.Headers
 open System.Collections.Generic
-open Newtonsoft.Json
+open System.Text.Json
 open System.Text
-open Newtonsoft.Json.Linq
 open Aestas
 
 type CMessage = {role: string; message: string}
@@ -23,7 +22,7 @@ type CohereClient(profile: string) =
         use file = File.OpenRead(profile)
         use reader = new StreamReader(file)
         let json = reader.ReadToEnd()
-        Prim.JsonDeserializeObjectWithOption<CProfile>(json)
+        Prim.JsonDeserializeFs<CProfile>(json)
     let messages = {message = ""; model = "command-r-plus"; preamble = chatInfo.system; 
                                 chat_history = ResizeArray();
                                 connectors = (match chatInfo.connectors with | Some c -> c | None -> [||]);
@@ -49,11 +48,11 @@ type CohereClient(profile: string) =
         web.BaseAddress <- Uri url
         let getResponse content = 
             async {
-            let content = new StringContent(JsonConvert.SerializeObject(content), Encoding.UTF8, "application/json")
+            let content = new StringContent(JsonSerializer.Serialize(content), Encoding.UTF8, "application/json")
             let! response = web.PostAsync("", content) |> Async.AwaitTask
             let result = response.Content.ReadAsStringAsync().Result
             if response.IsSuccessStatusCode then
-                return JsonConvert.DeserializeObject<CResponse>(result) |> Ok
+                return JsonSerializer.Deserialize<CResponse>(result) |> Ok
             else return Error result
             }
         let! response = 
