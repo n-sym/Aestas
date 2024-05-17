@@ -56,9 +56,9 @@ module rec Parser =
     let rec parseExpr (tokens: Token list) (errors: string list) =
         let rec go tokens acc errors =
             match tokens with
-            | TokenSpace::TokenPipe::xs
-            | TokenSpace::TokenRightPipe::xs
-            | TokenSpace::TokenRightRound::xs -> acc |> List.rev, xs, errors
+            | TokenSpace::TokenPipe::_
+            | TokenSpace::TokenRightPipe::_
+            | TokenSpace::TokenRightRound::_ -> acc |> List.rev, tokens, errors
             | TokenSpace::TokenLeftRound::xs
             | TokenLeftRound::xs ->
                 match parse xs errors |> eatSpaceOfTuple with

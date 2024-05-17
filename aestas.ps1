@@ -90,7 +90,7 @@ function Init {
     }
     Write-Output "Initialization complete."
 }
-$usage = "Usage: aestas.ps1 [ build | run | cli | init ]"
+$usage = "Usage: aestas.ps1 [build | run | cli | init] or aestas.ps1 [cmdlex | cmdparse] [source code]"
 if ($args.Length -eq 1) {
     if ($args[0] -eq "build") {
         dotnet build --configuration Release
