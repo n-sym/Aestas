@@ -106,7 +106,7 @@ module Cli =
             match args[0] with
             | "run" ->
                 ()
-                //AestasBot.run()
+                AestasBot.run()
             | "cli" ->
                 run()
                 ()
