@@ -6,7 +6,9 @@ open System.Net.Http.Headers
 open System.Collections.Generic
 open System.Text
 open System.Text.Json
-    
+open Aestas
+open Prim    
+
 type MsTTS_Profile = {subscriptionKey: string; subscriptionRegion: string; voiceName: string; outputFormat: string;}
 
 type MsTTS_Client(profile: string) =
@@ -14,7 +16,7 @@ type MsTTS_Client(profile: string) =
         use file = File.OpenRead(profile)
         use reader = new StreamReader(file)
         let json = reader.ReadToEnd()
-        JsonSerializer.Deserialize<MsTTS_Profile>(json)
+        jsonDeserialize<MsTTS_Profile>(json)
 
     // let upload (file: byte[]) (upHost: string) =
     //     let url = upHost

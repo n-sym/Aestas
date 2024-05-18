@@ -7,11 +7,12 @@ open System.Collections.Generic
 open System.Text
 open System.Text.Json
 open Aestas
+open Prim
 
 type EProfile = {api_key:string; secret_key: string; mutable system: string; max_length: int; database: Dictionary<string, string>[] option}
-type EResponse = {id: string; object: string; created: int; sentence_id: int;
-                is_end: bool; is_truncated: bool; result: string;
-                need_clear_history: bool; ban_round: int; usang: string}
+type EResponse = {id: string; object: string; created: int;
+                is_truncated: bool; result: string;
+                need_clear_history: bool}
 type EModel =
 | Ernie_Chara
 | Ernie_35
@@ -30,7 +31,7 @@ type ErnieClient(profile: string, model: EModel) =
         use file = File.OpenRead(profile)
         use reader = new StreamReader(file)
         let json = reader.ReadToEnd()
-        JsonSerializer.Deserialize<EProfile>(json)
+        jsonDeserialize<EProfile>(json)
     let messages = {messages = ResizeArray(); system = chatInfo.system}
     let database = 
         match chatInfo.database with
@@ -44,7 +45,7 @@ type ErnieClient(profile: string, model: EModel) =
         let content = new StringContent("{}", Encoding.UTF8, "application/json")
         let response = web.PostAsync("", content).Result
         let result = response.Content.ReadAsStringAsync().Result
-        (JsonSerializer.Deserialize<Nodes.JsonObject>(result)["access_token"]).ToString()
+        (jsonDeserialize<Nodes.JsonObject>(result)["access_token"]).ToString()
     
     let checkDialogLength () =
         let rec trim (messages: ResizeArray<Message>) sum =
@@ -63,11 +64,11 @@ type ErnieClient(profile: string, model: EModel) =
         let temp = ResizeArray(messages.messages)
         temp.Add {role = "user"; content = input}
         let messages' = {messages = temp; system = Prim.buildDatabasePrompt chatInfo.system database}
-        let content = new StringContent(JsonSerializer.Serialize(messages'), Encoding.UTF8, "application/json")
+        let content = new StringContent(jsonSerialize(messages'), Encoding.UTF8, "application/json")
         let! response = web.PostAsync("", content) |> Async.AwaitTask
         let result = response.Content.ReadAsStringAsync().Result
         if response.IsSuccessStatusCode then
-            let response = JsonSerializer.Deserialize<EResponse>(result)
+            let response = jsonDeserialize<EResponse>(result)
             do! send response.result
             messages.messages.Add {role = "user"; content = input}
             messages.messages.Add {role = "assistant"; content = response.result}

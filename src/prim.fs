@@ -4,16 +4,28 @@ open System.Text
 open System.Text.Json
 open System.Text.Json.Serialization
 open System.Collections.Generic
+open System.Text.Encodings.Web
+open System.Text.Unicode
 module Prim = 
     let version = Version(0, 240517)
+    let inline is<'t when 't: not struct> (a: obj) =
+        match a with
+        | :? 't -> true
+        | _ -> false
+    let inline await a = a |> Async.AwaitTask |> Async.RunSynchronously
+    let inline isNotNull a = a |> isNull |> not
     let fsOptions = 
         JsonFSharpOptions.Default()
             .WithSkippableOptionFields(SkippableOptionFields.Always, true)
             .ToJsonSerializerOptions()
-    let inline JsonDeserializeFs<'t> (x: string) = 
+    let _ =
+        fsOptions.Encoder <- JavaScriptEncoder.Create(UnicodeRanges.All)
+    let inline jsonDeserialize<'t> (x: string) = 
         JsonSerializer.Deserialize<'t>(x, fsOptions)
-    let inline JsonSerializeFs (x: 't) = 
+    let inline jsonSerialize (x: 't) = 
         JsonSerializer.Serialize<'t>(x, fsOptions)
+    let inline (|StrStartWith|_|) (s: string) (x: string) = 
+        if x.StartsWith(s) then Some x else None
     type 't arrList = ResizeArray<'t>
     type System.Collections.Generic.List<'t> with
         member this.GetReverseIndex(_:int, offset) = this.Count-offset-1

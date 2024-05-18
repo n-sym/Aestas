@@ -8,7 +8,7 @@ open System.Text
 
 type Message = {role: string; content: string}
 type Messages = {messages: ResizeArray<Message>; system: string}
-type GenerationConfig = {temperature: float; max_length: int; top_k: int; top_p: float}
+type GenerationConfig = {temperature: float; max_length: int; top_k: int; top_p: float; context_length: int}
 type IChatClient =
     interface
         abstract member Messages: ResizeArray<Message>

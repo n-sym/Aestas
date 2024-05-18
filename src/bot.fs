@@ -22,32 +22,25 @@ open Prim
 open Aestas.Commands.Command
 
 module rec AestasBot =
-    type private arrList<'t> = Prim.arrList<'t>
     type Config = {id: string; passwordMD5: string;}
-    let inline await a = a |> Async.AwaitTask |> Async.RunSynchronously
-    let inline isNotNull a = a |> isNull |> not
-    let inline isEntity<'a when 'a :> IMessageEntity> (a: IMessageEntity) =
-        match a with
-        | :? 'a -> true
-        | _ -> false
     let run() =
         let keyStore =
             try
             use file = File.OpenRead("keystore.json")
             use reader = new StreamReader(file)
-            JsonSerializer.Deserialize<BotKeystore>(reader.ReadToEnd())
+            jsonDeserialize<BotKeystore>(reader.ReadToEnd())
             with _ -> new BotKeystore()
         let deviceInfo =
             try
             use file = File.OpenRead("deviceinfo.json")
             use reader = new StreamReader(file)
-            JsonSerializer.Deserialize<BotDeviceInfo>(reader.ReadToEnd())
+            jsonDeserialize<BotDeviceInfo>(reader.ReadToEnd())
             with _ -> 
                 let d = BotDeviceInfo.GenerateInfo()
                 d.DeviceName <- "Aestas@Lagrange-" + Prim.randomString 6
                 d.SystemKernel <- Environment.OSVersion.VersionString
                 d.KernelVersion <- Environment.OSVersion.Version.ToString()
-                File.WriteAllText("deviceinfo.json", JsonSerializer.Serialize(d))
+                File.WriteAllText("deviceinfo.json", jsonSerialize(d))
                 d
         use bot = BotFactory.Create(
             let c = new BotConfig() in
@@ -116,7 +109,7 @@ module rec AestasBot =
         login keyStore bot
         Console.ReadLine() |> ignore
     let saveKeyStore keyStore =
-        File.WriteAllText("keystore.json", JsonSerializer.Serialize(keyStore))
+        File.WriteAllText("keystore.json", jsonSerialize(keyStore))
     let login keyStore bot =
         printfn "Try login.."
         if keyStore.Uid |> String.IsNullOrEmpty then
@@ -187,7 +180,7 @@ module rec AestasBot =
                     m.Uin = context.BotUin
                 | _ -> false
             ) |> event.Chain.Any || 
-            (let msg = event.Chain.FirstOrDefault(fun t -> isEntity<TextEntity> t) in
+            (let msg = event.Chain.FirstOrDefault(fun t -> t :?TextEntity) in
             if isNull msg then false else
             let text = (msg :?> TextEntity).Text in 
                 aestas.awakeMe 
@@ -272,7 +265,7 @@ module rec AestasBot =
         send content
         }
     let tryProcessCommand aestas context msgs print isPrivate id = 
-        let msg = msgs.FirstOrDefault(fun t -> isEntity<TextEntity> t)
+        let msg = msgs.FirstOrDefault(fun t -> t :? TextEntity)
         if isNull msg then false else
         let text = (msg :?> TextEntity).Text.Trim()
         printfn "%s" text
@@ -371,7 +364,7 @@ module rec AestasBot =
         let result = Dictionary<string, Sticker>()
         try
         let json = 
-            File.ReadAllText("profiles/stickers.json") |> JsonSerializer.Deserialize<_Stickers>
+            File.ReadAllText("profiles/stickers.json") |> jsonDeserialize<_Stickers>
         for p in json.from_file do
             let data = File.ReadAllBytes p.Value
             result.Add(p.Key, data |> ImageSticker)
@@ -382,6 +375,6 @@ module rec AestasBot =
 
     let loadAwakeMe() =
         try
-        File.ReadAllText("profiles/awake_me.json") |> JsonSerializer.Deserialize<Dictionary<string, float32>>
+        File.ReadAllText("profiles/awake_me.json") |> jsonDeserialize<Dictionary<string, float32>>
         with
         | _ -> Dictionary()

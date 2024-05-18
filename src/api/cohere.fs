@@ -7,6 +7,7 @@ open System.Collections.Generic
 open System.Text.Json
 open System.Text
 open Aestas
+open Prim
 
 type CMessage = {role: string; message: string}
 type CConnectors = {id: string}
@@ -22,7 +23,7 @@ type CohereClient(profile: string) =
         use file = File.OpenRead(profile)
         use reader = new StreamReader(file)
         let json = reader.ReadToEnd()
-        Prim.JsonDeserializeFs<CProfile>(json)
+        jsonDeserialize<CProfile>(json)
     let messages = {message = ""; model = "command-r-plus"; preamble = chatInfo.system; 
                                 chat_history = ResizeArray();
                                 connectors = (match chatInfo.connectors with | Some c -> c | None -> [||]);
@@ -48,11 +49,11 @@ type CohereClient(profile: string) =
         web.BaseAddress <- Uri url
         let getResponse content = 
             async {
-            let content = new StringContent(JsonSerializer.Serialize(content), Encoding.UTF8, "application/json")
+            let content = new StringContent(jsonSerialize(content), Encoding.UTF8, "application/json")
             let! response = web.PostAsync("", content) |> Async.AwaitTask
             let result = response.Content.ReadAsStringAsync().Result
             if response.IsSuccessStatusCode then
-                return JsonSerializer.Deserialize<CResponse>(result) |> Ok
+                return jsonDeserialize<CResponse>(result) |> Ok
             else return Error result
             }
         let! response = 

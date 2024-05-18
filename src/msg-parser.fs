@@ -49,7 +49,8 @@ module rec MessageParser =
                 let i = scanSqParen cache botOut (i+1)
                 let e = cache.ToString()
                 //[voice@emotion:content]
-                if e.StartsWith "voice" then
+                match e with
+                | StrStartWith "voice" _ ->
                     match media.text2speech with
                     | Some tts ->
                         let colon = e.IndexOf(':')
@@ -60,15 +61,16 @@ module rec MessageParser =
                         printfn $"Parsed voice of text: {text}, emotion: {emotion}"
                         new RecordEntity(data, 2) |> result.Add
                     | _ -> new TextEntity($"[{e}]") |> result.Add
-                elif e.StartsWith "sticker" then
+                | StrStartWith "sticker" _
+                | StrStartWith "stickers" _ ->
                     let colon = e.IndexOf(':')
                     if sticker e[colon+1..] |> not then
                         new TextEntity($"[{e}]") |> result.Add
-                elif e.StartsWith "note" then
+                | StrStartWith "note" _ ->
                     let colon = e.IndexOf(':')
                     let note = e[colon+1..]
                     notes.Add note
-                else 
+                | _ ->
                     if sticker e |> not then
                         new TextEntity($"[{e}]") |> result.Add
                 cache.Clear() |> ignore

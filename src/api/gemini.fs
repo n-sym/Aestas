@@ -23,7 +23,7 @@ type GSafetyThreshold =
 | BLOCK_MEDIUM_AND_ABOVE
 | BLOCK_ONLY_HIGH
 | BLOCK_NONE
-type GProfile = {api_key: string option; gcloudpath: string option; mutable system: string; safetySettings: GSafetySetting[]; max_length: int; database: Dictionary<string, string>[] option; generation_configs: Dictionary<string, GenerationConfig> option}
+type GProfile = {api_key: string option; gcloudpath: string option; mutable system: string; safetySettings: GSafetySetting[]; database: Dictionary<string, string>[] option; generation_configs: Dictionary<string, GenerationConfig> option}
 type GGenerationConfig = {maxOutputTokens: int; temperature: float; topP: float; topK: float}
 type GRequest = {contents: ResizeArray<GContent>; safetySettings: GSafetySetting[]; systemInstruction: GContent; generationConfig: GGenerationConfig option}
 type GCandidate = {content: GContent; finishReason: string; index: int; safetyRatings: GSafetyRatting[]}
@@ -61,7 +61,7 @@ type GeminiClient (profile: string, flash: bool) =
         use file = File.OpenRead(profile)
         use reader = new StreamReader(file)
         let json = reader.ReadToEnd()
-        JsonDeserializeFs<GProfile>(json)
+        jsonDeserialize<GProfile>(json)
     let model = if flash then "gemini-1.5-flash-latest" else "gemini-1.5-pro-latest"
     let rec convertSaftySettings (l: (GSafetyCategory*GSafetyThreshold) list) =
         match l with
@@ -92,8 +92,11 @@ type GeminiClient (profile: string, flash: bool) =
         | Some db -> ResizeArray(db)
         | None -> ResizeArray()
     let checkDialogLength () =
+        match chatInfo.generation_configs with
+        | None -> ()
+        | Some config ->
         let rec trim (messages: ResizeArray<GContent>) sum =
-            if sum > chatInfo.max_length && messages.Count <> 0 then
+            if sum > config[model].context_length && messages.Count <> 0 then
                     let temp = messages[0].parts[0].text.Length+messages[1].parts[0].text.Length
                     messages.RemoveRange(0, 2)
                     trim messages (sum-temp)
@@ -112,10 +115,10 @@ type GeminiClient (profile: string, flash: bool) =
                     {role = "system"; parts = [|{text = buildDatabasePrompt messages.systemInstruction.parts[0].text database}|]}
                 let messages = 
                     {contents = temp; safetySettings = chatInfo.safetySettings; systemInstruction = system; generationConfig = messages.generationConfig}
-                Gemini.postRequest chatInfo apiLink (JsonSerializer.Serialize(messages))
+                Gemini.postRequest chatInfo apiLink (jsonSerialize(messages))
             match response with
             | Ok result ->
-                let response = JsonSerializer.Deserialize<GResponse>(result).candidates[0].content.parts[0].text
+                let response = jsonDeserialize<GResponse>(result).candidates[0].content.parts[0].text
                 // gemini often return line break which seems redundant, so we need to remove it
                 // they will increase these line breaks when they learn from context, so must remove it
                 // their website (aistudio.google.com) also do that....
@@ -145,7 +148,7 @@ type Gemini10Client(profile: string, tunedName: string) =
         use file = File.OpenRead(profile)
         use reader = new StreamReader(file)
         let json = reader.ReadToEnd()
-        JsonDeserializeFs<GProfile>(json)
+        jsonDeserialize<GProfile>(json)
     let messages = {
             contents = ResizeArray(); 
             safetySettings = chatInfo.safetySettings; 
@@ -166,8 +169,11 @@ type Gemini10Client(profile: string, tunedName: string) =
         | Some db -> ResizeArray(db)
         | None -> ResizeArray()
     let checkDialogLength () =
+        match chatInfo.generation_configs with
+        | None -> ()
+        | Some config ->
         let rec trim (messages: ResizeArray<GContent>) sum =
-            if sum > chatInfo.max_length && messages.Count <> 2 then
+            if sum > config["gemini-1.0-pro"].context_length && messages.Count <> 2 then
                 let temp = messages[2].parts[0].text.Length+messages[3].parts[0].text.Length
                 messages.RemoveRange(2, 2)
                 trim messages (sum-temp)
@@ -198,10 +204,10 @@ type Gemini10Client(profile: string, tunedName: string) =
                     sb.Append input |> ignore
                     sb.Append "\n{model}:" |> ignore
                     {contents = ResizeArray([{role = "user"; parts = [|{text = sb.ToString()}|]}]); safetySettings = chatInfo.safetySettings; generationConfig = messages.generationConfig}
-            Gemini.postRequest chatInfo apiLink (JsonSerializer.Serialize(messages))
+            Gemini.postRequest chatInfo apiLink (jsonSerialize(messages))
         match response with
         | Ok result ->
-            let response = JsonSerializer.Deserialize<GResponse>(result).candidates[0].content.parts[0].text
+            let response = jsonDeserialize<GResponse>(result).candidates[0].content.parts[0].text
             do! send response
             messages.contents.Add {role = "user"; parts = [|{text = input}|]}
             messages.contents.Add {role = "model"; parts = [|{text = response}|]}
