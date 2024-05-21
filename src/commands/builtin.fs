@@ -15,7 +15,7 @@ module AestasBuiltinCommands =
             member this.Execute (env, args) =
                 args[0]
             member this.Help = "Identity command"
-    [<AestasCommand("conslog", AestasCommandDomain.All)>]
+    [<AestasCommand("conslog", AestasCommandDomain.Chat)>]
     type ConsoleLog() =
         interface ICommand with
             member this.Execute (env, args) =
@@ -37,13 +37,13 @@ module AestasBuiltinCommands =
                     sb.Append("\n#").Append(p.Key).Append(":\n--").Append(p.Value.Help) |> ignore
                 sb.ToString() |> env.log; Unit
             member this.Help = "Prints the commands"
-    [<AestasCommand("current", AestasCommandDomain.All)>]
+    [<AestasCommand("current", AestasCommandDomain.Chat)>]
     type Current() =
         interface ICommand with
             member this.Execute (env, args) =
                 env.log $"Current model is {env.model.Value.GetType()}"; Unit
             member this.Help = "Prints the current model"
-    [<AestasCommand("switch", AestasCommandDomain.All)>]
+    [<AestasCommand("switch", AestasCommandDomain.Chat)>]
     type Switch() =
         interface ICommand with
             member this.Execute (env, args) =
@@ -74,7 +74,7 @@ module AestasBuiltinCommands =
                 | _ -> env.log "Invalid arguments";
                 Unit
             member this.Help = "Switches the model"
-    [<AestasCommand("dump", AestasCommandDomain.All)>]
+    [<AestasCommand("dump", AestasCommandDomain.Chat)>]
     type Dump() =
         interface ICommand with
             member this.Execute (env, args) =
@@ -167,7 +167,7 @@ module AestasBuiltinCommands =
                     sb.ToString() |> env.log;
                 | _ -> env.log "Invalid arguments"
                 Unit
-            member this.Help = "Examine the notes"
+            member this.Help = "Examine the notebook"
     [<AestasCommand("op", AestasCommandDomain.All)>]
     type DoOperators() =
         interface ICommand with
@@ -186,5 +186,5 @@ module AestasBuiltinCommands =
                 | String "%"::Number x::Number y::[] ->
                     Number (x % y)
                 | _ -> env.log "Invalid arguments"; Unit
-            member this.Help = "For fun"
+            member this.Help = "Caculate numbers, just for fun"
     

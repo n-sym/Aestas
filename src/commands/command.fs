@@ -9,7 +9,7 @@ open AestasTypes
 open Lexer
 open Parser
 module Command =
-    type AestasCommandDomain = None = 0 | Private = 1 | Group = 2 | All = 3
+    type AestasCommandDomain = None = 0 | Private = 1 | Group = 2 | Console = 4 | Chat = 3 | All = 7
     type AestasCommandAttribute =
         inherit System.Attribute
         val Name: string

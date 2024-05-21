@@ -179,21 +179,24 @@ module rec AestasBot =
                 | :? MentionEntity as m ->
                     m.Uin = context.BotUin
                 | _ -> false
-            ) |> event.Chain.Any || 
-            (let msg = event.Chain.FirstOrDefault(fun t -> t :?TextEntity) in
+            ) |> event.Chain.Any
+        let awakeMe = 
+            let msg = event.Chain.FirstOrDefault(fun t -> t :?TextEntity) in
             if isNull msg then false else
             let text = (msg :?> TextEntity).Text in 
                 aestas.awakeMe 
-                |> Seq.tryFind (fun p -> text.Contains(p.Key))
+                |> Seq.tryFind (fun p -> 
+                    if p.Key.StartsWith("regex:") then Regex.IsMatch(text, p.Key[6..])
+                    else text.Contains(p.Key))
                 |> function 
                     | Some p -> p.Value > Random.Shared.NextSingle()
-                    | None -> false)
+                    | None -> false
         let name = 
             if event.Chain.GroupMemberInfo.MemberCard |> String.IsNullOrEmpty then
                 event.Chain.GroupMemberInfo.MemberName
             else event.Chain.GroupMemberInfo.MemberCard
-        if atMe then 
-            if tryProcessCommand aestas context event.Chain print false event.Chain.GroupUin.Value then () else
+        if atMe || awakeMe then 
+            if atMe && tryProcessCommand aestas context event.Chain print false event.Chain.GroupUin.Value then () else
             let dialog = event.Chain |> MessageParser.parseElements true (getMsgGroup context event.Chain aestas true) aestas.media
             try
             if aestas.groupChats.ContainsKey(event.Chain.GroupUin.Value) |> not then 
