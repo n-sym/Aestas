@@ -139,6 +139,10 @@ module rec AestasBot =
             |> context.SendMessage |> await |> ignore
         if event.Chain.FriendUin = context.BotUin then () else
         if tryProcessCommand aestas context event.Chain print true event.Chain.FriendUin then () else
+        let name = 
+            if event.Chain.FriendInfo.Remarks |> String.IsNullOrEmpty then
+                event.Chain.FriendInfo.Nickname
+            else event.Chain.FriendInfo.Remarks
         let dialog = event.Chain |> MessageParser.parseElements true (getMsgPrivte context event.Chain aestas true) aestas.media
         try
         if aestas.privateChats.ContainsKey(event.Chain.FriendUin) |> not then 
@@ -146,7 +150,7 @@ module rec AestasBot =
             IChatClient.Create<ErnieClient> [|"profiles/chat_info_group_ernie.json"; Ernie_35P|])
         let chat = aestas.privateChats[event.Chain.FriendUin]
         aestas.prePrivateChat chat
-        chat.Turn $"{{{event.Chain.FriendInfo.Nickname}}} {dialog}" (buildElement context aestas.notes aestas.media event.Chain.FriendUin true)
+        chat.Turn $"{{{name}}} {dialog}" (buildElement context aestas.notes aestas.media event.Chain.FriendUin true)
         aestas.postPrivateChat chat
         with e -> printfn "Error: %A" e
         } |> Async.Start

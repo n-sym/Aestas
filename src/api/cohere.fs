@@ -15,9 +15,9 @@ type CRequest = {message: string; model: string; preamble: string;
             chat_history: ResizeArray<CMessage>; connectors: CConnectors[];
             documents: ResizeArray<Dictionary<string, string>>; search_queries_only: bool}
 type CProfile = {api_key:string; system: string; connectors: CConnectors[] option; documents: ResizeArray<Dictionary<string, string>> option; max_length: int}
-type CCitations = {start: int; [<CompiledName("end")>]end': int; text: string; document_ids: string[]}
-type CResponse = {text: string; generation_id: string; citations: CCitations[]; 
-            is_search_required: bool; finish_reason: string; }
+type CCitations = {start: int; [<CompiledName("end")>][<Serialization.JsonPropertyName("end")>]end': int; text: string; document_ids: string[]}
+type CResponse = {text: string; generation_id: string; citations: CCitations[] option; 
+            is_search_required: bool option; finish_reason: string; }
 type CohereClient(profile: string) =
     let chatInfo = 
         use file = File.OpenRead(profile)
